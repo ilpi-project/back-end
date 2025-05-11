@@ -1,4 +1,8 @@
 import Event from '../models/Event.js';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 export const getEventById = async (req, res) => {
     const { id } = req.params;
@@ -13,12 +17,19 @@ export const getEventById = async (req, res) => {
     }
 };
 
-export const getEvent = async (req, res) => {
+export const getEvents = async (req, res) => {
+    const token = req.headers['authorization']?.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ message: 'Token não fornecido' });
+    }
+
     try {
-        const events = await Event.find();
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const events = await Event.find({ user: decoded.userId });
         return res.status(200).json(events);
     } catch (e) {
-        return res.status(500).json({ message: 'Erro ao buscar eventos: ', e });
+        return res.status(500).json({ message: 'Erro ao buscar eventos: ', error: e.message });
     }
 };
 
