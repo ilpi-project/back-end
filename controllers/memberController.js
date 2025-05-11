@@ -40,7 +40,7 @@ export const getMembers = async (req, res) => {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const members = await Member.find({ user: decoded.userId }).select('-image');
+        const members = await Member.find({ user: decoded.userId }).select('-image').populate('user', 'name phone');
         res.status(200).json(members);
     } catch (e) {
         res.status(401).json({ message: 'Token inválido ou expirado' });
