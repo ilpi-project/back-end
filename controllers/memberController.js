@@ -1,4 +1,8 @@
 import Member from '../models/Member.js';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 export const getMemberById = async (req, res) => {
     const { id } = req.params;
@@ -14,11 +18,18 @@ export const getMemberById = async (req, res) => {
 };
 
 export const getMembers = async (req, res) => {
+    const token = req.headers['authorization']?.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ message: 'Token não fornecido' });
+    }
+
     try {
-        const members = await Member.find();
-        return res.status(200).json(members);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const members = await Member.find({ user: decoded.userId });
+        res.status(200).json(members);
     } catch (e) {
-        return res.status(500).json({ message: 'Erro ao buscar membros: ', e });
+        res.status(401).json({ message: 'Token inválido ou expirado' });
     }
 };
 
