@@ -6,21 +6,21 @@ import jwt from 'jsonwebtoken';
 dotenv.config();
 
 export const validateUser = async (req, res) => {
-    const token = req.headers["authorization"]?.split(" ")[1];
+    const token = req.headers['authorization']?.split(' ')[1];
 
     if (!token) {
-        return res.status(401).json({ message: "Token não fornecido" });
+        return res.status(401).json({ message: 'Token não fornecido' });
     }
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await User.findById(decoded.userId);
+        const user = await User.findById(decoded.userId).select('-image');
         if (!user) {
-            return res.status(404).json({ message: "Usuário não encontrado" });
+            return res.status(404).json({ message: 'Usuário não encontrado' });
         }
         res.status(200).json({ name: user.name });
     } catch (e) {
-        return res.status(401).json({ message: "Token inválido ou expirado" });
+        return res.status(401).json({ message: 'Token inválido ou expirado' });
     }
 };
 
@@ -29,22 +29,22 @@ export const login = async (req, res) => {
     try {
         const user = await User.findOne({ email });
         if (!user || !(await bcrypt.compare(password, user.password))) {
-            return res.status(400).json({ message: "Credenciais inválidas" });
+            return res.status(400).json({ message: 'Credenciais inválidas' });
         }
 
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-            expiresIn: "12h",
+            expiresIn: '12h',
         });
         res.json({ userId: user._id, token });
     } catch (e) {
-        res.status(500).json({ message: "Erro ao realizar login: ", e });
+        res.status(500).json({ message: 'Erro ao realizar login: ', e });
     }
 };
 
 export const getUserById = async (req, res) => {
     const { id } = req.params;
     try {
-        const user = await User.findById(id);
+        const user = await User.findById(id).select('-image');
         if (!user) {
             return res.status(404).json({ message: 'Usuário não encontrado' });
         }
@@ -54,9 +54,23 @@ export const getUserById = async (req, res) => {
     }
 };
 
+export const getUserImage = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const user = await User.findById(id);
+        if (!user || !user.image || !user.image.data) {
+            return res.status(404).json({ message: 'Imagem não encontrada' });
+        }
+        res.set('Content-Type', user.image.contentType);
+        return res.send(user.image.data);
+    } catch (e) {
+        return res.status(500).json({ message: 'Erro ao buscar imagem', e });
+    }
+};
+
 export const getUsers = async (req, res) => {
     try {
-        const users = await User.find();
+        const users = await User.find().select('-image');
         return res.status(200).json(users);
     } catch (e) {
         return res.status(500).json({ message: 'Erro ao buscar usuários', e });
@@ -65,10 +79,16 @@ export const getUsers = async (req, res) => {
 
 export const createUser = async (req, res) => {
     const { password, ...rest } = req.body;
+    let image;
+
+    if (req.file) {
+        image = { data: req.file.buffer, contentType: req.file.mimetype };
+    }
+
     try {
         const saltRounds = 10;
         const passwordHash = await bcrypt.hash(password, saltRounds);
-        const newUser = await User.create({ password: passwordHash, ...rest });
+        const newUser = await User.create({ password: passwordHash, image, ...rest });
         return res.status(201).json(newUser);
     } catch (e) {
         if (e.code === 11000) {
@@ -85,7 +105,7 @@ export const updateUser = async (req, res) => {
     try {
         const updatedUser = await User.findByIdAndUpdate(id, data, {
             new: true,
-        });
+        }).select('-image');
         if (!updatedUser) {
             return res.status(404).json({ message: 'Usuário não encontrado.' });
         }

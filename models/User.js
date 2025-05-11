@@ -5,6 +5,10 @@ const userSchema = new Schema({
         type: String,
         required: true,
     },
+    image: {
+        data: Buffer,
+        contentType: String,
+    },
     cpf: {
         type: String,
         required: true, 
