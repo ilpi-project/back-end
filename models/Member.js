@@ -27,10 +27,6 @@ const memberSchema = new Schema({
         type: String,
         default: '',
     },
-    emergencyNumber: {
-        type: String,
-        required: true,
-    },
     medicalConditions: {
         type: [String],
         default: [],
